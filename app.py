@@ -1,14 +1,26 @@
-from flask import Flask
-
 app = Flask(__name__)
 
 
-@app.get("/")
-def health_check():
+@app.route("/", methods=["GET"])
+def home():
     return {
         "status": "ok",
-        "service": "Brian | Team.APEX",
+        "service": "Brian | Team.APEX"
     }
+
+
+@app.route("/slack/events", methods=["POST"])
+def slack_events():
+    data = request.get_json(silent=True) or {}
+
+    # Slack URL 인증
+    if data.get("type") == "url_verification":
+        return jsonify({
+            "challenge": data.get("challenge")
+        })
+
+    # 나중에 Slack 메시지를 처리할 위치
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
