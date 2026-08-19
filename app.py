@@ -17,12 +17,34 @@ openai_client = OpenAI()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
 SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET", "")
 
+def get_channels():
+    response = requests.get(
+        "https://slack.com/api/conversations.list",
+        headers={
+            "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+        },
+        params={
+            "types": "public_channel,private_channel",
+            "limit": 1000,
+        },
+        timeout=20,
+    )
+
+    response.raise_for_status()
+
+    result = response.json()
+
+    if not result.get("ok"):
+        raise RuntimeError(result.get("error"))
+
+    return result["channels"]
 
 @app.route("/", methods=["GET"])
 def home():
+    channels = get_channels()
     return {
-        "status": "ok",
-        "service": "Brian | Team.APEX"
+        "count": len(channels),
+        "channels": [c["name"] for c in channels],
     }
 
 
@@ -85,6 +107,27 @@ def send_slack_message(channel: str, text: str, thread_ts: str | None = None) ->
     if not result.get("ok"):
         raise RuntimeError(f"Slack 오류: {result.get('error', 'unknown_error')}")
 
+def get_channel_messages(channel: str, limit: int = 100):
+    response = requests.get(
+        "https://slack.com/api/conversations.history",
+        headers={
+            "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+        },
+        params={
+            "channel": channel,
+            "limit": limit,
+        },
+        timeout=20,
+    )
+
+    response.raise_for_status()
+
+    result = response.json()
+
+    if not result.get("ok"):
+        raise RuntimeError(f"Slack 오류: {result.get('error', 'unknown_error')}")
+
+    return result["messages"]
 
 def create_brian_reply(user_message: str) -> str:
     response = openai_client.responses.create(
