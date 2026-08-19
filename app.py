@@ -39,14 +39,22 @@ def get_channels():
 
     return result["channels"]
 
+def find_channel_id(channel_name: str):
+    channels = get_channels()
+
+    for c in channels:
+        if c["name"] == channel_name:
+            return c["id"]
+
+    return None
+
 @app.route("/", methods=["GET"])
 def home():
-    channels = get_channels()
-    return {
-        "count": len(channels),
-        "channels": [c["name"] for c in channels],
-    }
+    channel_id = find_channel_id("player-강유준")
 
+    return {
+        "channel_id": channel_id
+    }
 
 def verify_slack_request() -> bool:
     """Slack에서 실제로 보낸 요청인지 확인합니다."""
